@@ -178,7 +178,7 @@ local v_shitian = fk.CreateTriggerSkill{
       room:delay(500)
     else	--触发彩蛋
       if player:getMark("v_shitian_failed") >= 1 then
-        room:setEmotion(player, "./packages/VupSlash/image/anim/v_shitian_failed")
+        room:setEmotion(player, "./packages/vupslash/image/anim/v_shitian_failed")
 
       else
         room:addPlayerMark(player, "v_shitian_failed", 1)
@@ -283,17 +283,17 @@ local v_chouka = fk.CreateTriggerSkill{
       if choice == "v_chouka_stop" then
         room:obtainCard(player.id, dummy)
         if #(dummy.subcards) >= 3 then
-          room:setEmotion(player, "./packages/VupSlash/image/anim/haibao")
+          room:setEmotion(player, "./packages/vupslash/image/anim/haibao")
           --getThread暂无此代码，因此先注释掉。
           room:delay(360)
-          room:setEmotion(player, "./packages/VupSlash/image/anim/haibao")
+          room:setEmotion(player, "./packages/vupslash/image/anim/haibao")
           if #(dummy.subcards) >= 4 then
             --为玩家记录可解锁角色，由于暂无本功能，先注释掉
             --RecordUnlockGenerals(player, "baishenyao_weiwunv")
             room:delay(360)
-            room:setEmotion(player, "./packages/VupSlash/image/anim/haibao")
+            room:setEmotion(player, "./packages/vupslash/image/anim/haibao")
             room:delay(360)
-            room:setEmotion(player, "./packages/VupSlash/image/anim/haibao")
+            room:setEmotion(player, "./packages/vupslash/image/anim/haibao")
           end
         end
         room:delay(500)
@@ -788,7 +788,7 @@ local v_youlan = fk.CreateTriggerSkill{
     if event == fk.DamageInflicted then
       damage.damage = damage.damage - 1
       if damage.damage <= 0 then
-        room:setEmotion(player, "./packages/VupSlash/image/anim/skill_nullify")
+        room:setEmotion(player, "./packages/vupslash/image/anim/skill_nullify")
       end
     elseif event == fk.DamageCaused then
       damage.damage = damage.damage + 1
@@ -1573,6 +1573,6 @@ laila_xuelie:addSkill(v_yishou)
 laila_xuelie:addSkill(v_jixue)
 
 -- 加载本包的翻译包(load translations of this package)，这一步在本文档的最后进行。
-dofile "packages/VupSlash/i18n/init.lua"
+dofile "packages/vupslash/i18n/init.lua"
 
 return { extension }
