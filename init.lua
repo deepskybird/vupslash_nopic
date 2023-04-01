@@ -1191,7 +1191,7 @@ local v_guiying = fk.CreateTriggerSkill{
 --角色马克：蟹袭，归影
 --------------------------------------------------
 
-local ruanqingyan_hushanguiying = General(extension,"ruanqingyan_hushanguiying", "individual", 1, 3, General.Female)
+local ruanqingyan_hushanguiying = General(extension,"ruanqingyan_hushanguiying", "individual", 3, 3, General.Female)
 ruanqingyan_hushanguiying:addSkill(v_xiexi)
 ruanqingyan_hushanguiying:addSkill(v_guiying)
 
