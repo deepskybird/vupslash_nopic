@@ -12,7 +12,7 @@ wild_mode = false	--狂野模式！！（仅限服务器用，解放偷梁换柱
 --------------------------------------------------
 
 local extension = Package("vupslash")
-extension.metadata = require "packages.VupSlash.metadata"
+extension.metadata = require "packages.vupslash.metadata"
 -- 加载本包的翻译包(load translations of this package)，这一步在本文档的最后进行。
 
 --------------------------------------------------
