@@ -1,5 +1,5 @@
 return {
-  name = "VupSlash",
+  name = "vupslash",
   author = "观测站",
   description = "",
   collaborators = {
