@@ -261,8 +261,30 @@ Fk:loadTranslationTable{
 	["v_jixue"] = "祭血",
 	[":v_jixue"] = "限定技，出牌阶段，你可以弃置你的所有红色牌，每以此法弃置一张牌，你回复1点体力或摸一张牌。",
 
+  --风野慵
+  ["fengyeyong_youhemingling"] = "风野慵",
+	["&fengyeyong_youhemingling"] = "风野慵",
+	["#fengyeyong_youhemingling"] = "幽河冥灵",
+	["$fengyeyong_youhemingling"] = "一般",
+	["designer:fengyeyong_youhemingling"] = "Tangentle",
+	["cv:fengyeyong_youhemingling"] = "",
+	["illustrator:fengyeyong_youhemingling"] = "",
+	["~fengyeyong_youhemingling"] = "",
+  ["v_jiaoduo"] = "娇惰",
+	[":v_jiaoduo"] = "每回合限一次，你可以跳过 <font color='#9400D3'>判定/摸牌/出牌</font> 阶段<font color='#A9A9A9'>发动此技能</font>，本回合你的下一个阶段结束时，将手牌数调整至与此技能发动时相同（至多摸至体力上限张数）。",
+	["$v_jiaoduo"] = "",
+	["no_handcard"] = "无手牌",
+	["v_jiaoduo:choice"] = "你可以跳过 %src 阶段发动“娇惰”，下个阶段结束时将手牌数调整至 %dest",
+
   --模式
   ["aaa_role_mode"] = "身份模式",
+  --斗地主模式
+  ["m_1v2_mode"] = "欢乐斗地主",
+  ["m_feiyang"] = "飞扬",
+  ["m_bahu"] = "特权",
+  ["#m_1v2_rule"] = "选择补给",
+  ["m_1v2_draw2"] = "摸两张牌",
+  ["m_1v2_heal"] = "回复1点体力",
 }
 
 -- aux skills

@@ -81,37 +81,41 @@ end
 
 local turn_end_clear_mark = {}	--回合结束清除的标记
 local mark_cleaner = fk.CreateTriggerSkill{
-  name = "mark_cleaner",
-  refresh_events = {fk.EventPhaseChanging},
-  can_refresh = function(self, event, target, player, data)
-    return data.from ~= Player.NotActive and data.to == Player.NotActive
-  end,
-  on_refresh = function(self, event, target, player, data)
-    local room = player.room
-    for _, p in ipairs(turn_end_clear_mark) do
-      room:setPlayerMark(player, p, 0)
-    end
-  end,
+name = "mark_cleaner",
+refresh_events = {fk.EventPhaseChanging},
+can_refresh = function(self, event, target, player, data)
+  return data.from ~= Player.NotActive and data.to == Player.NotActive
+end,
+on_refresh = function(self, event, target, player, data)
+  local room = player.room
+  for _, p in ipairs(turn_end_clear_mark) do
+    room:setPlayerMark(player, p, 0)
+  end
+end,
 }
+
+--Fk:addSkill(mark_cleaner)
 
 --------------------------------------------------
 --出牌阶段造成多少伤害
 --------------------------------------------------
 
 local damage_checker = fk.CreateTriggerSkill{
-  name = "damage_checker",
-  refresh_events = {fk.Damage},
-  can_refresh = function(self, event, target, player, data)
-    return target == player
-  end,
-  on_refresh = function(self, event, target, player, data)
-    local room = player.room
-    local damage = data
-    print(damage.damage)
-    room:addPlayerMark(player, "#play_damage", damage.damage)
-  end,
+name = "damage_checker",
+refresh_events = {fk.Damage},
+can_refresh = function(self, event, target, player, data)
+  return target == player
+end,
+on_refresh = function(self, event, target, player, data)
+  local room = player.room
+  local damage = data
+  print(damage.damage)
+  room:addPlayerMark(player, "#play_damage", damage.damage)
+end,
 }
 table.insert(turn_end_clear_mark, "#play_damage")
+
+--Fk:addSkill(damage_checker)
 
 --------------------------------------------------
 --测试技能：超级英姿
@@ -945,6 +949,7 @@ local v_fangxian = fk.CreateTriggerSkill{
     room:setPlayerMark(player, "@@v_fangxian", 0)
   end
 }
+
 table.insert(turn_end_clear_mark, "@@v_fangxian")
 
 v_fangxian:addRelatedSkill(v_fangxian_choice)
@@ -1031,6 +1036,7 @@ local v_shihuan = fk.CreateTriggerSkill{
   end,
   --TODO:轮次结束清理标记，由于轮次开始/结束时时机预计将于0.0.6版本实装，因此暂不更新。
 }
+
 table.insert(turn_end_clear_mark, "@v_shihuan!")
 
 --v_shihuan:addRelatedSkill(v_shihuan_buff)
@@ -1491,6 +1497,7 @@ local v_yishou = fk.CreateTriggerSkill{
     end
   end,
 }
+
 table.insert(turn_end_clear_mark, "v_yishou_active")
 
 v_yishou:addRelatedSkill(v_yishou_mark)
@@ -1571,6 +1578,149 @@ local v_jixue = fk.CreateActiveSkill{
 local laila_xuelie = General(extension,"laila_xuelie", "individual", 3, 3, General.Female)
 laila_xuelie:addSkill(v_yishou)
 laila_xuelie:addSkill(v_jixue)
+
+--------------------------------------------------
+--模式：斗地主
+--------------------------------------------------
+
+-- Because packages are loaded before gamelogic.lua loaded
+-- so we can not directly create subclass of gamelogic in the top of lua
+local m_1v2_getLogic = function()
+  local m_1v2_logic = GameLogic:subclass("m_1v2_logic")
+
+  function m_1v2_logic:initialize(room)
+    GameLogic.initialize(self, room)
+    self.role_table = {nil, nil, {"lord", "rebel", "rebel"}}
+  end
+
+  function m_1v2_logic:chooseGenerals()
+    local room = self.room
+    local function setPlayerGeneral(player, general)
+      if Fk.generals[general] == nil then return end
+      player.general = general
+      player.gender = Fk.generals[general].gender
+      self.room:broadcastProperty(player, "general")
+      self.room:broadcastProperty(player, "gender")
+    end
+
+    local lord = room:getLord()
+    room.current = lord
+    local nonlord = room.players
+    local generals = Fk:getGeneralsRandomly(#nonlord * 3)
+    table.shuffle(generals)
+    for _, p in ipairs(nonlord) do
+      local arg = {
+        (table.remove(generals, 1)).name,
+        (table.remove(generals, 1)).name,
+        (table.remove(generals, 1)).name,
+      }
+      p.request_data = json.encode(arg)
+      p.default_reply = arg[1]
+    end
+
+    room:doBroadcastRequest("AskForGeneral", nonlord)
+    for _, p in ipairs(nonlord) do
+      if p.general == "" and p.reply_ready then
+        local general = json.decode(p.client_reply)[1]
+        setPlayerGeneral(p, general)
+      else
+        setPlayerGeneral(p, p.default_reply)
+      end
+      p.default_reply = ""
+    end
+  end
+
+  return m_1v2_logic
+end
+
+local m_feiyang = fk.CreateTriggerSkill{
+  name = "m_feiyang",
+  anim_type = "control",
+  events = {fk.EventPhaseStart},
+  can_trigger = function(self, event, target, player, data)
+    return target == player and player:hasSkill(self.name) and
+      player.phase == Player.Judge and
+      #player:getCardIds(Player.Hand) >= 2 and
+      #player:getCardIds(Player.Judge) > 0
+  end,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    room:askForDiscard(player, 2, 2, false, self.name, false)
+    local card = room:askForCardChosen(player, player, "j", self.name)
+    room:throwCard(card, self.name, player, player)
+  end
+}
+Fk:addSkill(m_feiyang)
+
+local m_bahubuff = fk.CreateTargetModSkill{
+  name = "#m_bahubuff",
+  residue_func = function(self, player, skill, scope)
+    if player:hasSkill(self.name) and skill.trueName == "slash_skill"
+      and scope == Player.HistoryPhase then
+      return 1
+    end
+  end,
+}
+local m_bahu = fk.CreateTriggerSkill{
+  name = "m_bahu",
+  anim_type = "drawcard",
+  frequency = Skill.Compulsory,
+  events = {fk.EventPhaseStart},
+  can_trigger = function(self, event, target, player, data)
+    return target == player and player:hasSkill(self.name) and
+      player.phase == Player.Start
+  end,
+  on_use = function(self, event, target, player, data)
+    player:drawCards(1)
+  end,
+}
+m_bahu:addRelatedSkill(m_bahubuff)
+
+Fk:addSkill(m_bahu)
+
+local m_1v2_rule = fk.CreateTriggerSkill{
+  name = "#m_1v2_rule",
+  priority = 0.001,
+  refresh_events = {fk.GameStart, fk.BuryVictim},
+  can_refresh = function(self, event, target, player, data)
+    if event == fk.GameStart then return player.role == "lord" end
+    return target == player
+  end,
+  on_refresh = function(self, event, target, player, data)
+    local room = player.room
+    if event == fk.GameStart then
+      room:handleAddLoseSkills(player, "m_feiyang|m_bahu", nil, false)
+      player.maxHp = player.maxHp + 1
+      player.hp = player.hp + 1
+      room:broadcastProperty(player, "maxHp")
+      room:broadcastProperty(player, "hp")
+      room:setTag("SkipNormalDeathProcess", true)
+    else
+      for _, p in ipairs(room.alive_players) do
+        if p.role == "rebel" then
+          local choices = {"m_1v2_draw2", "Cancel"}
+          if p:isWounded() then
+            table.insert(choices, 2, "m_1v2_heal")
+          end
+          local choice = room:askForChoice(p, choices, self.name)
+          if choice == "m_1v2_draw2" then p:drawCards(2)
+          else room:recover{ who = p, num = 1, skillName = self.name } end
+        end
+      end
+    end
+  end,
+}
+Fk:addSkill(m_1v2_rule)
+
+local m_1v2_mode = fk.CreateGameMode{
+  name = "m_1v2_mode",
+  minPlayer = 3,
+  maxPlayer = 3,
+  rule = m_1v2_rule,
+  logic = m_1v2_getLogic,
+}
+
+extension:addGameMode(m_1v2_mode)
 
 -- 加载本包的翻译包(load translations of this package)，这一步在本文档的最后进行。
 dofile "packages/vupslash/i18n/init.lua"
