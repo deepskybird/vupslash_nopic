@@ -30,6 +30,7 @@ Fk:loadTranslationTable{
   --通用选项
   ["draw_1"] = "摸一张牌",
   ["recover_1"] = "回复一点体力",
+  ["confirm"] = "确认",
   ["cancel"] = "取消",
 
   --角色
@@ -273,8 +274,10 @@ Fk:loadTranslationTable{
   ["v_jiaoduo"] = "娇惰",
 	[":v_jiaoduo"] = "每回合限一次，你可以跳过 <font color='#9400D3'>判定/摸牌/出牌</font> 阶段<font color='#A9A9A9'>发动此技能</font>，本回合你的下一个阶段结束时，将手牌数调整至与此技能发动时相同（至多摸至体力上限张数）。",
 	["$v_jiaoduo"] = "",
-	["no_handcard"] = "无手牌",
-	["v_jiaoduo:choice"] = "你可以跳过 %src 阶段发动“娇惰”，下个阶段结束时将手牌数调整至 %dest",
+  ["@v_jiaoduo_card"] = "娇惰",
+	["@@v_jiaoduo_nocard"] = "无手牌",
+  ["#v_jiaoduo_choice"] = "你可以跳过 %src 阶段发动“娇惰”，下个阶段结束时将手牌数调整至 %dest",
+	--["v_jiaoduo:choice"] = "你可以跳过 %src 阶段发动“娇惰”，下个阶段结束时将手牌数调整至 %dest",
 
   --模式
   ["aaa_role_mode"] = "身份模式",

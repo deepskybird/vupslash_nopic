@@ -72,6 +72,23 @@ local function suit_close(suit)
 end
 
 --------------------------------------------------
+--交互方式逃课方案1
+--------------------------------------------------
+
+local function yes_or_no(player, skill_name, prompt)
+  local room = player.room
+  local choiceList = {}
+  table.insert(choiceList, "confirm")
+  table.insert(choiceList, "cancel")
+  local choice = room:askForChoice(player, choiceList, skill_name, prompt)
+  if choice == "confirm" then
+    return true
+  elseif choice == "cancel" then
+    return false
+  end
+end
+
+--------------------------------------------------
 --标记清理者（回合结束版）
 --TODO:清理需要规避的东西还没完善;global与否以及怎么放进系统待定
 --TODO2:目前已做完的需要纳管的技能（芳仙，龙息，视幻（待定），袭穴）
@@ -203,7 +220,7 @@ local v_cangcong = fk.CreateTriggerSkill{
   events = {fk.TargetConfirmed},
   --触发条件：触发时机的角色为遍历到的角色、遍历到的角色具有本技能、牌的种类为杀/锦囊牌、牌的目标>1。
   can_trigger = function(self, event, target, player, data)
-    print(#AimGroup:getAllTargets(data.tos))
+    --print(#AimGroup:getAllTargets(data.tos))
     return target == player and player:hasSkill(self.name) and
       (data.card.name == "slash" or (data.card.type == Card.TypeTrick and
       data.card.sub_type ~= Card.SubtypeDelayedTrick)) and
@@ -316,7 +333,7 @@ local v_yonglanHelper = fk.CreateTriggerSkill{
   name = "#v_yonglanHelper",
   refresh_events = {fk.TargetConfirming},
   can_refresh = function(self, event, target, player, data)
-    print(data.card.number)
+    --print(data.card.number)
     return (target == player and player:hasSkill(self.name))
   end,
   on_refresh = function(self, event, target, player, data)
@@ -417,7 +434,7 @@ local v_yangge_damage_checker = fk.CreateTriggerSkill{
     if event == fk.Damage then
       local room = player.room
       local damage = data
-      print(damage.damage)
+      --print(damage.damage)
       room:addPlayerMark(player, "#play_damage", damage.damage)
     elseif event == fk.EventPhaseChanging then
       local room = player.room
@@ -452,7 +469,7 @@ local v_yangge = fk.CreateTriggerSkill{
   on_use = function(self, event, target, player, data)
     local room = player.room
     local peach_or_not = room:askForCard(player, 1, 1, false, self.name, true)[1]
-    print(peach_or_not)
+    --print(peach_or_not)
     local alives = room:getAlivePlayers()
     local targets = {}
     for _,p in ipairs(alives) do
@@ -669,7 +686,7 @@ local v_huoyan = fk.CreateTriggerSkill{
         new_use.skillName = self.name
 
         --测试skillName是否有效
-        print(new_use.skillName)
+        --print(new_use.skillName)
 
         room:useCard(new_use)
 
@@ -715,7 +732,7 @@ local v_longxi = fk.CreateTriggerSkill{
     local longxi_tar = AimGroup:getAllTargets(targets.tos)
     --选择这张牌指定的所有目标，执行拆一张牌的指令
     for _, p in ipairs(longxi_tar) do
-      print(p)
+      --print(p)
       local pls = room:getPlayerById(p)
       --如果被选定的目标两个区域都没牌则不执行下一步。
       if (not pls:isNude()) then
@@ -1259,7 +1276,7 @@ local v_qilv = fk.CreateTriggerSkill{
     new_use.card = slash
     new_use.skillName = self.name
     --测试skillName是否有效
-    print(new_use.skillName)
+    --print(new_use.skillName)
     room:useCard(new_use)
   end,
 }
@@ -1532,8 +1549,8 @@ local v_jixue = fk.CreateActiveSkill{
     local cards_throw = {}
     local hand = from:getCardIds(Player.Hand)
     local equip = from:getCardIds(Player.Equip)
-    print(hand)
-    print(equip)
+    --print(hand)
+    --print(equip)
     for _,p in ipairs(hand) do
       table.insert(cards, p)
     end
@@ -1550,7 +1567,7 @@ local v_jixue = fk.CreateActiveSkill{
     end
     --local x = #(dummy.subcards)
     local x = #(cards_throw)
-    print(x)
+    --print(x)
     if x > 0 then
       room:throwCard(cards_throw, self.name, from, from)
     end
@@ -1584,105 +1601,86 @@ laila_xuelie:addSkill(v_jixue)
 
 --------------------------------------------------
 --娇惰
---技能马克：优化芳仙本体技能发动时的描述（可以考虑第一阶段的choice也做成锁定技，然后用askchooseplayer一类的方法插入tips）。
+--技能马克：
 --------------------------------------------------
 
-local v_jiaoduo_choice = fk.CreateTriggerSkill{
-  name = "#v_jiaoduo_choice",
-  --赋予特殊型技能定义
-  anim_type = "special",
-  --时机：阶段变化时
-  events = {fk.EventPhaseChanging},
-  --触发条件：触发时机的角色为遍历到的角色、遍历到的角色具有本技能，下一阶段为摸牌阶段，摸牌阶段未被跳过。
-  can_trigger = function(self, event, target, player, data)
-    local change = data
-    --阶段变化时，实现“是否跳摸牌”的效果。 
-    --exist_or_not：用来确认是否跳过对应阶段，类似于以前的Player:isSkipped()
-    return target == player and player:hasSkill(self.name) 
-    and change.to == Player.Draw and exist_or_not(player, Player.Draw)
-  end,
-  -- on_trigger = function(self, event, target, player, data)
-  --   --if self:isEffectable(player) then
-  --   self:doCost(event, target, player, data)
-  --   --end
-  -- end,
-  -- on_cost = function(self, event, target, player, data)
-  --   --if self:isEffectable(player) then
-  --   return true
-  --   --end
-  -- end,
-  on_use = function(self, event, target, player, data)
-    local room = player.room
-    --阶段变化时，实现“是否跳摸牌”的效果。
-    local change = data
-    if change.to == Player.Draw then
-        --技能被无效化的效果试作
-        if self:isEffectable(player) then
-          room:setPlayerMark(player, "@@v_fangxian", 1)
-        end
-        --此处不使用player:skip()而使用return true原因如下：
-        --N神原话：触发技被触发的源头为Gamelogic::trigger（这个可以参考文档）
-        --根据源码serverplay.lua中play函数的表示（其用于每个阶段的衍生），每个阶段开始时会先检索一次跳过阶段
-        --由于其相关概念影响到触发时机，因此影响到了on_use中skip函数的使用
-        --新版本说法：时机为change阶段时，跳阶段的检测已经完成，此时把下一个阶段塞进跳阶段列表里无效。
-        return true
-        --end
-      --end
-    end
-  end,
-}
 local v_jiaoduo = fk.CreateTriggerSkill{
   name = "v_jiaoduo",
   --赋予特殊型技能定义
   anim_type = "special",
-  --时机：阶段变化时，阶段开始时
-  events = {fk.EventPhaseChanging, fk.EventPhaseStart},
-  --触发条件：遍历到的角色处于结束阶段，通过芳仙跳过摸牌阶段。
+  --时机：阶段变化时，阶段结束时
+  events = {fk.EventPhaseChanging, fk.EventPhaseEnd},
+  --触发条件：
+  --（阶段变化时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；
+  --             本回合只使用过一次技能；
+  --             被遍历到的角色处于判定/摸牌/出牌阶段；
+  --             被遍历到的角色存在对应阶段。
+  --（阶段结束时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；
+  --              在上个阶段使用了此技能（通过标记完成）。
   can_trigger = function(self, event, target, player, data)
-    local room = player.room
-    if player.phase == Player.Finish and player:getMark("@@v_fangxian") > 0 then
-      --在场且存活
-      --for _, p in ipairs(room:getAlivePlayers()) do
-      return true
-      --end
+    if event == fk.EventPhaseChanging then
+      return target == player and player:hasSkill(self.name)
+      and player:usedSkillTimes(self.name, Player.HistoryTurn) == 0
+      and (player.phase == Player.Judge or player.phase == Player.Draw or player.phase == Player.Play)
+      and exist_or_not(player, player.phase)
+    elseif event == fk.EventPhaseEnd then
+      return target == player and player:hasSkill(self.name)
+      and player:getMark("v_jiaoduo_using") > 0
     end
   end,
   on_cost = function(self, event, target, player, data)
-    return true
+    if event == fk.EventPhaseChanging then
+      local prompt = "#v_jiaoduo_choice:"..player.phase..":"..0
+      if player:getMark("@v_jiaoduo_card") > 0 then
+        print("card_yes")
+        local prompt = "#v_jiaoduo_choice:"..player.phase..":"..player:getMark("@v_jiaoduo_card")
+      end
+      print(prompt)
+      if yes_or_no(player, self.name, prompt) then
+        player:skip(player.phase)
+        return true
+      end
+    elseif event == fk.EventPhaseEnd and (player:getMark("@v_jiaoduo_card") > 0 or player:getMark("@@v_jiaoduo_nocard") > 0) then
+      return true
+    end
   end,
   on_use = function(self, event, target, player, data)
     local room = player.room
-    --阶段变化时，实现“是否跳摸牌”的效果。
-    if player.phase == Player.Finish and player:getMark("@@v_fangxian") > 0 then
-      --制作一个囊括所有存活角色的table-targets
-      local alives = room:getAlivePlayers()
-      local prompt = "#v_fangxian-target"
-      local targets = {}
-      for _, p in ipairs(alives) do
-        table.insert(targets, p.id)
+    --以on_cost中跳过阶段为代价，为风野提供标签以触发后续技能。
+    --一种标签为无手牌，另一种标签为手牌数，这种区分方式是因为需要将手牌数标签为0的情况视作未触发而非手牌为0.
+    if event == fk.EventPhaseChanging then
+      local cards = {}
+      local hand = player:getCardIds(Player.Hand)
+      for _,p in ipairs(hand) do
+        table.insert(cards, p)
       end
-      --to：从targets中选择1个目标，是个值为number的table。
-      local to = room:askForChoosePlayers(player, targets, 1, 1, prompt, self.name)
-      --这里后续可以增加“技能发动者是否可以对对应角色使用技能”的判定，类似于caneffect函数。
-      if #to > 0 then
-        --通过ID找到对应的ServerPlayer
-        local player_to = room:getPlayerById(to[1])
-				--指向类特效用函数doIndicate，但执行后由于不明原因在367行报了function的错，不理解。
-        --room:doAnimate(1, player:objectName(), to:objectName())	--doAnimate 1:产生一条从前者到后者的指示线
-        if player_to ~= player then
-          --doindicate的两个参数均为integer类型，一般为角色id
-          room:doIndicate(player.id,to)
-        end
-        room:recover{
-          who = player_to,
-          num = 1,
-          recoverBy = player,
-          skillName = self.name
-        }
-			else
-				player:drawCards(2, self.name)
-			end
-		end
+      local x = #(cards)
+      print(x)
+      room:setPlayerMark(player, "v_jiaoduo_using", 1)
+      if x > 0 then
+        room:setPlayerMark(player, "@v_jiaoduo_card", x)
+      else
+        room:setPlayerMark(player, "@@v_jiaoduo_nocard", 1)
+      end
+    elseif event == fk.EventPhaseEnd then
+      --清空使用状态，将之前记下来的手牌数转录到local变量z中
+      room:setPlayerMark(player, "v_jiaoduo_using", 0)
+      local z = 0
+      if player:getMark("@@v_jiaoduo_nocard") > 0 then
+        room:setPlayerMark(player, "@@v_jiaoduo_nocard", 0)
+      elseif player:getMark("@v_jiaoduo_card") > 0 then
+        z = player:getMark("@v_jiaoduo_card")
+        room:setPlayerMark(player, "@v_jiaoduo_card", 0)
+      end
+      --现有手牌小于/大于之前记录值之后的处理。
+      if player:getHandcardNum() < math.min(player.maxHp, z) then
+        local a = math.min(player.maxHp, z) - player:getHandcardNum()
+        player:drawCards(a, self.name)
+      elseif player:getHandcardNum() > z then
+        local a = player:getHandcardNum() - z
+        room:askForDiscard(player, a, a, false, self.name, false)
+      end
+    end
   end,
 
   --目前萌以前写的标记一键删除姬还没做出来，因此还是用比较原始的refresh处理。
@@ -1697,17 +1695,20 @@ local v_jiaoduo = fk.CreateTriggerSkill{
   end,
   on_refresh = function(self, event, target, player, data)
     local room = player.room
-    room:setPlayerMark(player, "@@v_fangxian", 0)
+    room:setPlayerMark(player, "v_jiaoduo_using", 0)
+    room:setPlayerMark(player, "@v_jiaoduo_card", 0)
+    room:setPlayerMark(player, "@@v_jiaoduo_nocard", 0)
   end
 }
 
-table.insert(turn_end_clear_mark, "@@v_fangxian")
-
-v_jiaoduo:addRelatedSkill(v_jiaoduo_choice)
+table.insert(turn_end_clear_mark, "v_jiaoduo_using")
+table.insert(turn_end_clear_mark, "@v_jiaoduo_card")
+table.insert(turn_end_clear_mark, "@@v_jiaoduo_nocard")
 
 --------------------------------------------------
---辻蓝佳音瑠
---角色马克：动画未实装
+--风野慵
+--bug：她可能把服务器干死机了。
+--角色马克：
 --------------------------------------------------
 
 local fengyeyong_youhemingling = General(extension,"fengyeyong_youhemingling", "individual", 4, 4, General.Female)
@@ -1859,4 +1860,4 @@ extension:addGameMode(m_1v2_mode)
 -- 加载本包的翻译包(load translations of this package)，这一步在本文档的最后进行。
 dofile "packages/vupslash/i18n/init.lua"
 
-return { extension }
+return { extension } 
