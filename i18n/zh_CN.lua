@@ -155,8 +155,8 @@ Fk:loadTranslationTable{
 	--[":v_huweishan"] = "每回合限一次，你使用【杀】时，你可以，摸一张牌并展示之，若之为基本牌则你可以弃置之，令此【杀】不计入出牌阶段的使用次数。",
   ["$v_huweishan1"] = "",
 	["$v_huweishan2"] = "",
-	["#v_huweishan_success"] = "由于“%arg”的效果，%from 的 %card 不计入使用次数",
-	["v_huweishan_throw:choice"] = "你可以弃置获得的牌，令此杀不计入使用次数",
+	["#v_huweishan_success"] = "由于“ %arg ”的效果，%from 的【杀】不计入使用次数",
+	["v_huweishan_throw_choice"] = "你可以弃置获得的牌，令此杀不计入使用次数",
 
   --鸽舍
   --七海幽娴

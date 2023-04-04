@@ -16,11 +16,32 @@ extension.metadata = require "packages.vupslash.metadata"
 -- 加载本包的翻译包(load translations of this package)，这一步在本文档的最后进行。
 
 --------------------------------------------------
+--计划
+--房间部分：
+-- 增加读条秒数及无懈可击秒数
+-- 增加手气卡
+-- 增加密码
+-- 增加安全直播模式
+--游戏部分：
+-- 增加超过最大体力值和滋养
+-- 增加交互方式
+-- 思考图片的处理方式
+--底层部分
+-- 增加属性伤害
+-- 在卡牌上做标记
+-- 增加轮次时点
+-- 录像！！！！
+-- AI！！！！！
+--UI部分
+-- 推进UI扩展包
+--------------------------------------------------
+
+--------------------------------------------------
 --通用马克
 --4/3血量的前端怎么处理需要后续看看QML能不能直接通过导入最大血量及现有血量逃课（N说是涉及底层汇编级别的问题，我想应该以后会有别的办法）
 --缺少技能无效时的应对（慵懒，芳仙，视幻等）-疑似在skill里有可用函数
 --有个player:canEffect(对方角色,技能名)的看不出来是什么，疑似与词条“发动此技能”有关，但和技能无效一样是通用内容）
---铁索连环疑似不被认定为锦囊；如果是的话 奈奈铁索不触发藏聪的问题需要后续处理
+--铁索连环的联动容易出问题，据说第一张用铁索的卡诺娅会直接触发技能。
 --skillinvoke强行发动一次的问题后续可以通过调整on_cost处理。
 --------------------------------------------------
 
@@ -855,6 +876,58 @@ table.insert(turn_end_clear_mark, "#v_longxi_mark")
 
 local kanuoya_akanluerbanlong = General(extension, "kanuoya_akanluerbanlong", "xuyanshe", 4, 4, General.Female)
 kanuoya_akanluerbanlong:addSkill(v_longxi)
+
+--------------------------------------------------
+--狐尾扇
+--技能马克：后续可以给展示用的牌做cardflag
+--------------------------------------------------
+
+local v_huweishan = fk.CreateTriggerSkill{
+  name = "v_huweishan",
+  --赋予输出型技能定义
+  anim_type = "offensive",
+  --时机：宣告使用牌后
+  events = {fk.AfterCardUseDeclared},
+  --（阶段变化时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；存在实体卡（后续需要测试，如不成功可以通过ID>0处理）。
+  --             使用的牌为杀；本回合只使用过一次技能。
+  can_trigger = function(self, event, target, player, data)
+    return target == player and player:hasSkill(self.name) and data.card
+    and data.card.trueName == "slash" and player:usedSkillTimes(self.name, Player.HistoryTurn) == 0
+  end,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    local card_id = room:drawCards(player, 1, self.name, top)[1]
+    local card = Fk:getCardById(card_id)
+    room:obtainCard(player, card_id, false, fk.ReasonDraw)
+    room:delay(250)
+    if room:getCardOwner(card_id) == player then
+      player:showCards(card)
+      if card.type == Card.TypeBasic then
+        local prompt = "v_huweishan_throw_choice"
+        if yes_or_no(player, self.name, prompt) then
+          room:setEmotion(player, "./packages/vupslash/image/anim/xingmengzhenxue")
+          room:throwCard(card_id, self.name, player, player)
+          player:addCardUseHistory(data.card.trueName, -1)
+          room:sendLog{
+            type = "#v_huweishan_success",
+            from = player.id,
+            arg = self.name,
+            --无法显示出真正的牌名
+            --car = card_id,
+          }
+        end
+      end
+    end
+  end,
+}
+
+--------------------------------------------------
+--星梦真雪
+--角色马克：性别中性未实装
+--------------------------------------------------
+
+local xingmengzhenxue_rongyixiaohu = General(extension,"xingmengzhenxue_rongyixiaohu", "individual", 4, 4, General.Female)
+xingmengzhenxue_rongyixiaohu:addSkill(v_huweishan)
 
 --------------------------------------------------
 --幽蓝
@@ -1826,30 +1899,6 @@ table.insert(turn_end_clear_mark, "@@v_jiaoduo_nocard")
 
 local fengyeyong_youhemingling = General(extension,"fengyeyong_youhemingling", "individual", 4, 4, General.Female)
 fengyeyong_youhemingling:addSkill(v_jiaoduo)
-
---------------------------------------------------
---娇惰
---技能马克：
---------------------------------------------------
-
-local v_huweishan = fk.CreateTriggerSkill{
-  name = "v_huweishan",
-  --赋予输出型技能定义
-  anim_type = "offensive",
-  --时机：宣告使用牌后
-  events = {fk.AfterCardUseDeclared},
-  --（阶段变化时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；存在实体卡（后续需要测试，如不成功可以通过ID>0处理）。
-  --             使用的牌为杀；本回合只使用过一次技能。
-  can_trigger = function(self, event, target, player, data)
-    return target == player and player:hasSkill(self.name) and data.card
-    and data.card.trueName == "slash" and player:usedSkillTimes(self.name, Player.HistoryTurn) == 0
-  end,
-  on_use = function(self, event, target, player, data)
-    local fireSlash = Fk:cloneCard("fire__slash")
-    fireSlash:addSubcard(data.card)
-    data.card = fireSlash
-  end,
-}
 
 --------------------------------------------------
 --模式：斗地主
