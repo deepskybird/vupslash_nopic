@@ -141,14 +141,16 @@ end,
 
 --------------------------------------------------
 --额外体力标记
+--bug：技能未触发
+--技能马克：未完成滋养前置的体力增加导致额外体力标记数量增加。
 --------------------------------------------------
 
 local extra_hp = fk.CreateTriggerSkill{
-name = "extra_hp",
+name = "#extra_hp",
 refresh_events = {fk.GameStart, fk.Damaged, fk.HpChanged},
 can_refresh = function(self, event, target, player, data)
   if event == fk.GameStart then
-    -- 要不直接return true？
+    return true
   elseif event == fk.Damaged then
     local damage = data
     return target == player and damage.damage > 0
@@ -161,20 +163,31 @@ on_refresh = function(self, event, target, player, data)
   local room = player.room
   if event == fk.GameStart then
     -- 检索所有在场角色，赋予额外体力标记。
+    print(1)
+    local all = room:getAllPlayers()
+    for _,p in ipairs(all) do
+      if p.hp > p.maxhp then
+        local x = p.hp - p.maxHp
+        room:setPlayerMark(p, "@extra_hp", x)
+      end
+    end
   elseif event == fk.Damaged then
     --减少对应的标记，如小于最大体力，归零
     if player.maxhp >= player.hp then
-      -- use
+      room:setPlayerMark(player, "@extra_hp", 0)
+    else
+      local x = player.hp - player.maxHp
+      room:setPlayerMark(player, "@extra_hp", x)
     end
   elseif event == fk.HpChanged then
     --增加对应的标记，需要注意此处的damage可能要改成-1之类的，配合以后的伪滋养处理吧。
     local damage = data
-    return target == player and damage.damage < 0
+    print(data)
   end
 end,
 }
 
---Fk:addSkill(extra_hp)
+Fk:addSkill(extra_hp)
 
 --------------------------------------------------
 --出牌阶段造成多少伤害
@@ -1664,7 +1677,6 @@ laila_xuelie:addSkill(v_jixue)
 
 --------------------------------------------------
 --娇惰
---bug：判定区没判定牌的话，不做判定区判定。
 --技能马克：
 -- Q1: 这个技能是什么意思？可以简单概括一下吗？
 -- A1: 一般来说是以下效果：
@@ -1814,6 +1826,30 @@ table.insert(turn_end_clear_mark, "@@v_jiaoduo_nocard")
 
 local fengyeyong_youhemingling = General(extension,"fengyeyong_youhemingling", "individual", 4, 4, General.Female)
 fengyeyong_youhemingling:addSkill(v_jiaoduo)
+
+--------------------------------------------------
+--娇惰
+--技能马克：
+--------------------------------------------------
+
+local v_huweishan = fk.CreateTriggerSkill{
+  name = "v_huweishan",
+  --赋予输出型技能定义
+  anim_type = "offensive",
+  --时机：宣告使用牌后
+  events = {fk.AfterCardUseDeclared},
+  --（阶段变化时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；存在实体卡（后续需要测试，如不成功可以通过ID>0处理）。
+  --             使用的牌为杀；本回合只使用过一次技能。
+  can_trigger = function(self, event, target, player, data)
+    return target == player and player:hasSkill(self.name) and data.card
+    and data.card.trueName == "slash" and player:usedSkillTimes(self.name, Player.HistoryTurn) == 0
+  end,
+  on_use = function(self, event, target, player, data)
+    local fireSlash = Fk:cloneCard("fire__slash")
+    fireSlash:addSubcard(data.card)
+    data.card = fireSlash
+  end,
+}
 
 --------------------------------------------------
 --模式：斗地主

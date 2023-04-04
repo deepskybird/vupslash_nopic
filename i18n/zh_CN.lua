@@ -27,6 +27,9 @@ Fk:loadTranslationTable{
   ["red"] = '<font color="#CC3131">红色</font>',
   ["nocolor"] = '<font color="grey">无色</font>',
 
+  --通用标签
+  ["@extra_hp"] = "额外体力",
+
   --通用选项
   ["draw_1"] = "摸一张牌",
   ["recover_1"] = "回复一点体力",
@@ -135,6 +138,25 @@ Fk:loadTranslationTable{
   ["v_longxi_getmark"] = "龙息",
 	[":v_longxi"] = "锁定技，你于出牌阶段内使用的第二张牌指定目标后，你破坏所有目标角色的各一张牌。",
 	["$v_longxi"] = "",
+
+  --泥鸭幼儿园
+  --星梦真雪
+  ["xingmengzhenxue_rongyixiaohu"] = "星梦真雪",
+	["&xingmengzhenxue_rongyixiaohu"] = "星梦真雪",
+	["#xingmengzhenxue_rongyixiaohu"] = "融熠宵狐",
+	["$xingmengzhenxue_rongyixiaohu"] = "萌新",
+	["designer:xingmengzhenxue_rongyixiaohu"] = "戦、月音风源",
+	["cv:xingmengzhenxue_rongyixiaohu"] = "",
+	["illustrator:xingmengzhenxue_rongyixiaohu"] = "",
+	["~xingmengzhenxue_rongyixiaohu"] = "",
+  ["v_huweishan"] = "狐尾扇",
+	["v_huweishan_throw"] = "狐尾扇",
+	[":v_huweishan"] = "每回合限一次，你使用【杀】时，你可以<font color='#A9A9A9'>发动此技能</font>，摸一张牌并展示之，若之为基本牌则你可以弃置之，令此【杀】不计入出牌阶段的使用次数。",
+	--[":v_huweishan"] = "每回合限一次，你使用【杀】时，你可以，摸一张牌并展示之，若之为基本牌则你可以弃置之，令此【杀】不计入出牌阶段的使用次数。",
+  ["$v_huweishan1"] = "",
+	["$v_huweishan2"] = "",
+	["#v_huweishan_success"] = "由于“%arg”的效果，%from 的 %card 不计入使用次数",
+	["v_huweishan_throw:choice"] = "你可以弃置获得的牌，令此杀不计入使用次数",
 
   --鸽舍
   --七海幽娴
