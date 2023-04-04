@@ -72,6 +72,32 @@ local function suit_close(suit)
 end
 
 --------------------------------------------------
+--返回phase对应的字符串
+--请注意8 notactive、9 phasenone暂无官方叫法，暂未写入
+--------------------------------------------------
+
+local function phase_string(phase_int)
+  if phase_int == 1 then
+    return "回合开始"
+  elseif phase_int == 2 then
+    return "准备"
+  elseif phase_int == 3 then
+    return "判定"
+  elseif phase_int == 4 then
+    return "摸牌"
+  elseif phase_int == 5 then
+    return "出牌"
+  elseif phase_int == 6 then
+    return "弃牌"
+  elseif phase_int == 7 then
+    return "结束"
+  else
+    return "我也不知道"
+  end
+end
+
+
+--------------------------------------------------
 --交互方式逃课方案1
 --------------------------------------------------
 
@@ -112,6 +138,43 @@ end,
 }
 
 --Fk:addSkill(mark_cleaner)
+
+--------------------------------------------------
+--额外体力标记
+--------------------------------------------------
+
+local extra_hp = fk.CreateTriggerSkill{
+name = "extra_hp",
+refresh_events = {fk.GameStart, fk.Damaged, fk.HpChanged},
+can_refresh = function(self, event, target, player, data)
+  if event == fk.GameStart then
+    -- 要不直接return true？
+  elseif event == fk.Damaged then
+    local damage = data
+    return target == player and damage.damage > 0
+  elseif event == fk.HpChanged then
+    local damage = data
+    return target == player and damage.damage < 0
+  end
+end,
+on_refresh = function(self, event, target, player, data)
+  local room = player.room
+  if event == fk.GameStart then
+    -- 检索所有在场角色，赋予额外体力标记。
+  elseif event == fk.Damaged then
+    --减少对应的标记，如小于最大体力，归零
+    if player.maxhp >= player.hp then
+      -- use
+    end
+  elseif event == fk.HpChanged then
+    --增加对应的标记，需要注意此处的damage可能要改成-1之类的，配合以后的伪滋养处理吧。
+    local damage = data
+    return target == player and damage.damage < 0
+  end
+end,
+}
+
+--Fk:addSkill(extra_hp)
 
 --------------------------------------------------
 --出牌阶段造成多少伤害
@@ -1601,7 +1664,22 @@ laila_xuelie:addSkill(v_jixue)
 
 --------------------------------------------------
 --娇惰
+--bug：判定区没判定牌的话，不做判定区判定。
 --技能马克：
+-- Q1: 这个技能是什么意思？可以简单概括一下吗？
+-- A1: 一般来说是以下效果：
+-- ①你可以跳过判定阶段，摸牌阶段结束后弃置两张牌
+-- ②你可以跳过摸牌阶段，出牌阶段结束后将手牌数补充至与跳过摸牌阶段时相同
+-- ③你可以跳过出牌阶段，弃牌阶段结束后将手牌数补充至与跳过出牌阶段时相同
+
+-- Q2: 至多摸至X张，这个上限会让我弃牌吗？
+-- A2: 不会。如至多摸至5张，将手牌从6张调整至10张，则不会摸牌或弃牌。
+
+-- Q3: 【乐不思蜀】对风野慵生效后，跳过摸牌阶段是什么效果？
+-- A3: 跳过摸牌阶段与出牌阶段，弃牌阶段结束后将手牌数调整至与摸牌阶段相同。
+
+-- Q4: 濑川绪良发动“奇遇”令风野慵于回合外执行一个出牌阶段，此时用“娇惰”跳过，会发生什么？
+-- A4: 于风野慵的下个回合的准备阶段执行后，将手牌数调整至与跳过这个额外出牌阶段时相同。
 --------------------------------------------------
 
 local v_jiaoduo = fk.CreateTriggerSkill{
@@ -1619,27 +1697,50 @@ local v_jiaoduo = fk.CreateTriggerSkill{
   --              在上个阶段使用了此技能（通过标记完成）。
   can_trigger = function(self, event, target, player, data)
     if event == fk.EventPhaseChanging then
+      local change = data
+      --判定区如无牌，则不做判定区处理。
+      local cards = {}
+      local hand = player:getCardIds(Player.Judge)
+      for _,p in ipairs(hand) do
+        table.insert(cards, p)
+      end
+      local x = #(cards)
+      print(player:usedSkillTimes(self.name, Player.HistoryTurn))
       return target == player and player:hasSkill(self.name)
       and player:usedSkillTimes(self.name, Player.HistoryTurn) == 0
-      and (player.phase == Player.Judge or player.phase == Player.Draw or player.phase == Player.Play)
-      and exist_or_not(player, player.phase)
+      and ((change.to == Player.Judge and x > 0) or change.to == Player.Draw or change.to == Player.Play)
+      and exist_or_not(player, change.to)
     elseif event == fk.EventPhaseEnd then
+      print("can_end") --*3
       return target == player and player:hasSkill(self.name)
       and player:getMark("v_jiaoduo_using") > 0
     end
   end,
   on_cost = function(self, event, target, player, data)
+    --获取本阶段手牌数，确认是否跳过本阶段。
     if event == fk.EventPhaseChanging then
-      local prompt = "#v_jiaoduo_choice:"..player.phase..":"..0
-      if player:getMark("@v_jiaoduo_card") > 0 then
-        print("card_yes")
-        local prompt = "#v_jiaoduo_choice:"..player.phase..":"..player:getMark("@v_jiaoduo_card")
+      local change = data
+      --print("EventPhaseChanging")
+      local prompt = "#v_jiaoduo_choice:::"..phase_string(change.to)..":"..0
+      --print(prompt)
+      local cards = {}
+      local hand = player:getCardIds(Player.Hand)
+      for _,p in ipairs(hand) do
+        table.insert(cards, p)
       end
-      print(prompt)
+      local x = #(cards)
+      if x > 0 then
+        if x > player.maxHp then
+          x = player.maxHp
+        end
+        prompt = "#v_jiaoduo_choice:::"..phase_string(change.to)..":"..x
+      end
       if yes_or_no(player, self.name, prompt) then
-        player:skip(player.phase)
+        --尝试了一下，这里不能跳阶段，失败的话只能耦合到on_use了。
+        --player:skip(change.to)
         return true
       end
+    --满足技能发动要求后，锁定发动。
     elseif event == fk.EventPhaseEnd and (player:getMark("@v_jiaoduo_card") > 0 or player:getMark("@@v_jiaoduo_nocard") > 0) then
       return true
     end
@@ -1662,6 +1763,7 @@ local v_jiaoduo = fk.CreateTriggerSkill{
       else
         room:setPlayerMark(player, "@@v_jiaoduo_nocard", 1)
       end
+      return true
     elseif event == fk.EventPhaseEnd then
       --清空使用状态，将之前记下来的手牌数转录到local变量z中
       room:setPlayerMark(player, "v_jiaoduo_using", 0)
@@ -1707,7 +1809,6 @@ table.insert(turn_end_clear_mark, "@@v_jiaoduo_nocard")
 
 --------------------------------------------------
 --风野慵
---bug：她可能把服务器干死机了。
 --角色马克：
 --------------------------------------------------
 
