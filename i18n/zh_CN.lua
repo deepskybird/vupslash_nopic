@@ -29,12 +29,16 @@ Fk:loadTranslationTable{
 
   --通用标签
   ["@extra_hp"] = "额外体力",
+  ["@turn_damage"] = "造成伤害",
 
   --通用选项
   ["draw_1"] = "摸一张牌",
   ["recover_1"] = "回复一点体力",
   ["confirm"] = "确认",
   ["cancel"] = "取消",
+
+  --通用描述
+  ["#defense_damage"] = "由于“%arg”的效果，防止了 %from 对 %to 造成的 %arg2 点伤害",
 
   --角色
   --psp
@@ -157,6 +161,39 @@ Fk:loadTranslationTable{
 	["$v_huweishan2"] = "",
 	["#v_huweishan_success"] = "由于“ %arg ”的效果，%from 的【杀】不计入使用次数",
 	["v_huweishan_throw_choice"] = "你可以弃置获得的牌，令此杀不计入使用次数",
+
+  --超次元学院
+  --弦羽
+  ["xianyu_xiangluancuxian"] = "弦羽",
+	["&xianyu_xiangluancuxian"] = "弦羽",
+	["#xianyu_xiangluancuxian"] = "翔鸾促弦",
+	["$xianyu_xiangluancuxian"] = "萌新",
+	["designer:xianyu_xiangluancuxian"] = "SunFlower、NSX",
+	["cv:xianyu_xiangluancuxian"] = "",
+	["illustrator:xianyu_xiangluancuxian"] = "",
+	["~xianyu_xiangluancuxian"] = "",
+	["v_motiao"] = "抹挑",
+	["v_motiao_using"] = "抹挑",
+	--[":v_motiao"] = "你于出牌阶段内使用牌指定自己为目标之一后，你可以摸一张牌。<br/><font color='#B22222'>使用此技能的回合，你只能造成1点伤害。</font>",
+	[":v_motiao"] = "准备阶段，你可以<font color='#A9A9A9'>发动此技能</font>，本回合内你只能造成1点伤害，你使用牌指定自己为目标之一后，摸一张牌。",
+  --[":v_motiao"] = "准备阶段，你可以，本回合内你只能造成1点伤害，你使用牌指定自己为目标之一后，摸一张牌。",
+	["v_motiao_choice"] = "你可以发动“抹挑”，本回合使用牌指定自己后摸一张牌，但只能造成1点伤害",
+	["$v_motiao1"] = "徵",
+	["$v_motiao2"] = "羽",
+	["$v_motiao3"] = "宫",
+	["$v_motiao4"] = "商",
+	["$v_motiao5"] = "角",
+	["$v_motiao6"] = "徵",
+	["$v_motiao7"] = "羽",
+	["$v_motiao8"] = "宫",
+	["$v_motiao9"] = "宫（滚奏）",
+	["$v_motiao10"] = "徵（滚奏）",
+  ["v_lianzou"] = "连奏",
+	["@v_lianzou_count"] = "连奏蓄力",
+	[":v_lianzou"] = "限定技，出牌阶段结束时，若你本阶段内使用的牌点数和≥50，你可以<font color='#A9A9A9'>发动此技能</font>，<font color='#9400D3'>连续判定</font>直到判定牌点数和≥50，你获得<font color='#9400D3'>这些判定牌</font>。",
+  --[":v_lianzou"] = "限定技，出牌阶段结束时，若你本阶段内使用的牌点数和≥50，你可以<font color='#9400D3'>连续判定</font>直到判定牌点数和≥50，你获得<font color='#9400D3'>这些判定牌</font>。",
+	["$v_lianzou1"] = "琶音",
+	["$v_lianzou2"] = "琶音",
 
   --鸽舍
   --七海幽娴

@@ -23,6 +23,7 @@ extension.metadata = require "packages.vupslash.metadata"
 -- 增加密码
 -- 增加安全直播模式
 --游戏部分：
+-- 增加音量调节功能
 -- 增加超过最大体力值和滋养
 -- 增加交互方式
 -- 思考图片的处理方式
@@ -30,6 +31,7 @@ extension.metadata = require "packages.vupslash.metadata"
 -- 增加属性伤害
 -- 在卡牌上做标记
 -- 增加轮次时点
+-- 胜率！（根据单游戏包/多游戏包，不同模式分类（可以把这些也做进筛选项））
 -- 录像！！！！
 -- AI！！！！！
 --UI部分
@@ -39,10 +41,16 @@ extension.metadata = require "packages.vupslash.metadata"
 --------------------------------------------------
 --通用马克
 --4/3血量的前端怎么处理需要后续看看QML能不能直接通过导入最大血量及现有血量逃课（N说是涉及底层汇编级别的问题，我想应该以后会有别的办法）
---缺少技能无效时的应对（慵懒，芳仙，视幻等）-疑似在skill里有可用函数
+
+--skillinvoke强行发动一次的问题后续可以通过调整on_cost处理。【初步解决，后续检查并实装on_cost，等skillinvoke更新后改回来。】
+--缺少技能无效时的应对（慵懒，芳仙，视幻等，后续更新）【疑似在skill里有可用函数】
+-- 在上面的情况下，以下技能存在跳过阶段无法作为on_cost一部分的方式，后续处理（芳仙、娇惰）
+--通用计算回合内伤害/弃牌量的东西暂时耦合在其他技能里（扬歌，抹挑）
+--回合后一键删除标记集成（龙息，抹挑，连奏，袭穴，芳仙，视幻，忆狩，娇惰）
 --有个player:canEffect(对方角色,技能名)的看不出来是什么，疑似与词条“发动此技能”有关，但和技能无效一样是通用内容）
+
+--bug:
 --铁索连环的联动容易出问题，据说第一张用铁索的卡诺娅会直接触发技能。
---skillinvoke强行发动一次的问题后续可以通过调整on_cost处理。
 --------------------------------------------------
 
 --------------------------------------------------
@@ -138,7 +146,7 @@ end
 --------------------------------------------------
 --标记清理者（回合结束版）
 --TODO:清理需要规避的东西还没完善;global与否以及怎么放进系统待定
---TODO2:目前已做完的需要纳管的技能（芳仙，龙息，视幻（待定），袭穴）
+--TODO2:目前已做完的需要纳管的技能（龙息，抹挑，连奏，袭穴，芳仙，视幻，忆狩，娇惰）
 --TODO3:失去技能后对标记的处理可以在一键删除姬里面处理（龙息，视幻（待定），袭穴）。
 --TODO4:各类基础信息统计
 --------------------------------------------------
@@ -211,11 +219,11 @@ end,
 Fk:addSkill(extra_hp)
 
 --------------------------------------------------
---出牌阶段造成多少伤害
+--本回合造成多少伤害
 --------------------------------------------------
 
 local damage_checker = fk.CreateTriggerSkill{
-name = "damage_checker",
+name = "#damage_checker",
 refresh_events = {fk.Damage},
 can_refresh = function(self, event, target, player, data)
   return target == player
@@ -224,10 +232,10 @@ on_refresh = function(self, event, target, player, data)
   local room = player.room
   local damage = data
   print(damage.damage)
-  room:addPlayerMark(player, "#play_damage", damage.damage)
+  room:addPlayerMark(player, "#turn_damage", damage.damage)
 end,
 }
-table.insert(turn_end_clear_mark, "#play_damage")
+table.insert(turn_end_clear_mark, "#turn_damage")
 
 --Fk:addSkill(damage_checker)
 
@@ -399,7 +407,7 @@ local v_chouka = fk.CreateTriggerSkill{
       local choice = room:askForChoice(player, choices, self.name, prompt)
       --点击取消，退出判定。
       if choice == "v_chouka_stop" then
-        room:obtainCard(player.id, dummy)
+        room:obtainCard(player.id, dummy, true)
         if #(dummy.subcards) >= 3 then
           room:setEmotion(player, "./packages/vupslash/image/anim/haibao")
           --getThread暂无此代码，因此先注释掉。
@@ -886,8 +894,8 @@ local v_huweishan = fk.CreateTriggerSkill{
   name = "v_huweishan",
   --赋予输出型技能定义
   anim_type = "offensive",
-  --时机：宣告使用牌后
-  events = {fk.AfterCardUseDeclared},
+  --时机：手牌结算后
+  events = {fk.CardUseFinished},
   --（阶段变化时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；存在实体卡（后续需要测试，如不成功可以通过ID>0处理）。
   --             使用的牌为杀；本回合只使用过一次技能。
   can_trigger = function(self, event, target, player, data)
@@ -898,7 +906,7 @@ local v_huweishan = fk.CreateTriggerSkill{
     local room = player.room
     local card_id = room:drawCards(player, 1, self.name, top)[1]
     local card = Fk:getCardById(card_id)
-    room:obtainCard(player, card_id, false, fk.ReasonDraw)
+    room:obtainCard(player, card_id, true, fk.ReasonDraw)
     room:delay(250)
     if room:getCardOwner(card_id) == player then
       player:showCards(card)
@@ -928,6 +936,247 @@ local v_huweishan = fk.CreateTriggerSkill{
 
 local xingmengzhenxue_rongyixiaohu = General(extension,"xingmengzhenxue_rongyixiaohu", "individual", 4, 4, General.Female)
 xingmengzhenxue_rongyixiaohu:addSkill(v_huweishan)
+
+--------------------------------------------------
+--抹挑
+--技能马克：
+--（后续跟全局合并）检测出牌阶段造成伤害的数量
+-- “本回合可以造成的伤害最高为1”还没测试
+--------------------------------------------------
+
+local v_motiao_damage_checker = fk.CreateTriggerSkill{
+  name = "#v_motiao_damage_checker",
+  refresh_events = {fk.Damage, fk.EventPhaseChanging},
+  can_refresh = function(self, event, target, player, data)
+    if event == fk.Damage then
+      return target == player and player:hasSkill(self.name)
+    elseif event == fk.EventPhaseChanging then
+      return target == player and player:hasSkill(self.name) and data.from ~= Player.NotActive and data.to == Player.NotActive
+    end
+  end,
+  on_refresh = function(self, event, target, player, data)
+    if event == fk.Damage then
+      local room = player.room
+      local damage = data
+      --print(damage.damage)
+      room:addPlayerMark(player, "#play_damage", damage.damage)
+    elseif event == fk.EventPhaseChanging then
+      local room = player.room
+      room:setPlayerMark(player, "#play_damage", 0)
+    end
+    
+  end,
+}
+local v_motiao = fk.CreateTriggerSkill{
+  name = "v_motiao",
+  --赋予摸牌型技能定义
+  anim_type = "drawcard",
+  --时机：阶段开始时，目标指定后, 造成伤害后
+  events = {fk.EventPhaseStart, fk.TargetSpecified},
+  --触发条件：
+  --（阶段开始时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；
+  --              被遍历到的角色处于回合开始阶段。
+  --（目标指定时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；
+  --             存在回合开始阶段时使用此技能的标签；
+  --             被指定的角色中存在遍历到的角色。
+  --             本次流程中第一次触发这个时机
+  can_trigger = function(self, event, target, player, data)
+    if event == fk.EventPhaseStart then
+      return target == player and player:hasSkill(self.name)
+      and player.phase == Player.Start
+    elseif event == fk.TargetSpecified then
+      local room = player.room
+      --遍历所有被指定到的角色，确认是否存在遍历到的角色
+      local motiao_useornot = false
+      local targets = data
+      local motiao_tar = AimGroup:getAllTargets(targets.tos)
+      for _, p in ipairs(motiao_tar) do
+        print(p)
+        local pls = room:getPlayerById(p)
+        if pls == player then
+          motiao_useornot = true
+        end
+      end
+      return target == player and player:hasSkill(self.name)
+      and player:getMark("v_motiao_using") > 0
+      and motiao_useornot
+      and targets.firstTarget
+    end
+  end,
+  on_cost = function(self, event, target, player, data)
+    --确认是否发动技能。
+    if event == fk.EventPhaseStart then
+      local prompt = "v_motiao_choice"
+      if yes_or_no(player, self.name, prompt) then
+        return true
+      end
+    --满足技能发动要求后，锁定发动。
+    elseif event == fk.TargetSpecified and player:getMark("v_motiao_using") > 0 then
+      return true
+    end
+  end,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    --以on_cost中做出选择为代价，本回合内你只能造成1点伤害，你使用牌指定自己为目标之一后，摸一张牌。
+    if event == fk.EventPhaseStart then
+      room:setPlayerMark(player, "v_motiao_using", 1)
+    --摸一张牌
+    elseif event == fk.TargetSpecified then
+      player:drawCards(1, self.name)
+    end
+  end,
+
+  --手牌结算后清除“本次指定中已经摸过牌”标签；以及伤害在这里刷新。
+  --目前萌以前写的标记一键删除姬还没做出来，因此还是用比较原始的refresh处理。
+  refresh_events = {fk.EventPhaseStart, fk.DamageCaused},
+  -- 刷新时机：（阶段开始时不赘述）
+  --（造成伤害后）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；
+  --             存在回合开始阶段时使用此技能的标签；
+  --             造成的伤害大于0；
+  --             非光属性伤害（暂未实装）。
+  can_refresh = function(self, event, target, player, data)
+    if not (target == player and player:hasSkill(self.name)) then
+      return false
+    end
+    if event == fk.EventPhaseStart then
+      return player.phase == Player.NotActive
+    elseif event == fk.DamageCaused then
+      return player:getMark("v_motiao_using") > 0
+      and data.damage > 0
+    end
+  end,
+  on_refresh = function(self, event, target, player, data)
+    local room = player.room
+    if event == fk.EventPhaseStart then
+      room:setPlayerMark(player, "v_motiao_using", 0)
+      --将本回合造成的伤害锁定为1（未测试，今晚摸了）
+    elseif event == fk.DamageCaused then
+      local x = math.min(data.damage, 1 - player:getMark("#play_damage"))
+      if x < data.damage then
+        if x > 0 then
+          data.damage = 1
+          return false
+        else
+          room:sendLog{
+            type = "#defense_damage",
+            from = player.id,
+            to = target.id,
+            arg = self.name,
+            arg2 = data.damage,
+          }
+          return true
+        end
+      end
+    end
+  end
+}
+
+table.insert(turn_end_clear_mark, "v_motiao_using")
+
+--------------------------------------------------
+--连奏
+--技能马克：打出的牌可能会无法返回number；丈八在下版本前可能还是算点数的。
+--------------------------------------------------
+
+local v_lianzou = fk.CreateTriggerSkill{
+  name = "v_lianzou",
+  --赋予摸牌型技能定义
+  anim_type = "drawcard",
+   --技能为限定技
+  frequency = Skill.Limited,
+  --时机：阶段结束时
+  events = {fk.EventPhaseEnd},
+  --触发条件：
+  --（阶段结束时）触发时机的角色为遍历到的角色；遍历到的角色具有本技能；
+  --              被遍历到的角色处于出牌阶段。
+  --              被遍历到的角色本场游戏使用此技能的次数为0
+  --              被遍历到的角色本轮使用/打出牌的点数之和>=50（打出是否算入在内待定）
+
+  can_trigger = function(self, event, target, player, data)
+    --if event == fk.EventPhaseEnd then
+    return target == player and player:hasSkill(self.name)
+    and player.phase == Player.Play
+    and player:usedSkillTimes(self.name, Player.HistoryGame) == 0
+    and player:getMark("@v_lianzou_count") >= 1
+    --end
+  end,
+  on_cost = function(self, event, target, player, data)
+    --确认是否发动技能。
+    --if event == fk.EventPhaseEnd then
+    local room = player.room
+    if room:askForSkillInvoke(player,self.name,data) then
+      return true
+    end
+    --end
+  end,
+  on_use = function(self, event, target, player, data)
+    local room = player.room
+    --判定直到点数大于等于50
+    if event == fk.EventPhaseEnd then
+      --这里可以后续放限定动画并给大概2500ms的延时+音效。
+      local count = 0
+      local dummy = Fk:cloneCard("slash")
+      while count < 50 do
+        local judge = {
+          who = player,
+          reason = self.name,
+          pattern = ".|1~"..(50-count).."|.",
+        }
+        room:judge(judge)
+        local result = judge.card
+        count = count + result.number
+        if count < 50 then
+          dummy:addSubcard(result)
+        end
+      end
+      room:obtainCard(player.id, dummy, true)
+    end
+  end,
+
+  --目前萌以前写的标记一键删除姬还没做出来，因此还是用比较原始的refresh处理。
+
+  --刷新时机：阶段开始时，手牌结算后，手牌打出结算后（这个说实话，待定）
+  refresh_events = {fk.EventPhaseStart, fk.CardUseFinished, fk.CardRespondFinished},
+  --刷新条件（不包括阶段开始时）
+  --（手牌结算后，手牌打出结算后（这个待定））
+  --             触发时机的角色为遍历到的角色；遍历到的角色具有本技能；
+  --              被遍历到的角色处于出牌阶段。
+  can_refresh = function(self, event, target, player, data)
+    if not (target == player and player:hasSkill(self.name)) then
+      return false
+    end
+    if event == fk.EventPhaseStart then
+      return player.phase == Player.NotActive
+    elseif event == fk.CardUseFinished or event == fk.CardRespondFinished then
+      return target == player and player:hasSkill(self.name)
+      and player.phase == Player.Play
+    end
+  end,
+  on_refresh = function(self, event, target, player, data)
+    local room = player.room
+    if event == fk.EventPhaseStart then
+      room:setPlayerMark(player, "@v_lianzou_count", 0)
+    --在满足以下条件的前提下，将牌的点数加入某个mark里。
+    -- 卡牌存在，为实体牌, 卡牌点数小于等于13大于0。
+    elseif event == fk.CardUseFinished or event == fk.CardRespondFinished then
+      local card = data
+      if card.card and card.card.id > 0 and card.card.number <= 13 and card.card.number > 0 then
+        room:addPlayerMark(player, "@v_lianzou_count", card.card.number)
+      end
+    end
+  end
+}
+
+table.insert(turn_end_clear_mark, "@v_lianzou_count")
+
+--------------------------------------------------
+--弦羽
+--角色马克：
+--------------------------------------------------
+
+local xianyu_xiangluancuxian = General(extension,"xianyu_xiangluancuxian", "chaociyuan", 3, 3, General.Female)
+xianyu_xiangluancuxian:addSkill(v_motiao)
+xianyu_xiangluancuxian:addSkill(v_lianzou)
 
 --------------------------------------------------
 --幽蓝
@@ -1237,8 +1486,8 @@ local v_kecan = fk.CreateTriggerSkill{
     local judge = {
       who = damage.from,
       reason = self.name,
-      --TODO:把所有锦囊牌的名字写上去
-      pattern = "TypeTrick",
+      --TODO:把所有锦囊牌的名字写上去？
+      pattern = "TypeTrick|.|.",
     }
     room:judge(judge)
     if judge.card.type == Card.TypeTrick then
@@ -1609,6 +1858,7 @@ local v_yishou_mark = fk.CreateTriggerSkill{
     elseif event == fk.EventPhaseStart then
       --需要的话在这里增加技能检测失效;非锁定技想强制发动这里用个true就好啦
       if room:askForSkillInvoke(player, self.name, data) then
+        room:loseHp(player, 1, self.name)
         return true
       end
     end
@@ -1616,7 +1866,6 @@ local v_yishou_mark = fk.CreateTriggerSkill{
   on_use = function(self, event, target, player, data)
     local room = player.room
     if event == fk.EventPhaseStart then
-      room:loseHp(player, 1, self.name)
       room:addPlayerMark(player, "@v_yishou_count", 1)
     elseif event == fk.Damaged then
       room:addPlayerMark(player, "@v_yishou_count", 1)
@@ -1790,13 +2039,11 @@ local v_jiaoduo = fk.CreateTriggerSkill{
         table.insert(cards, p)
       end
       local x = #(cards)
-      print(player:usedSkillTimes(self.name, Player.HistoryTurn))
       return target == player and player:hasSkill(self.name)
       and player:usedSkillTimes(self.name, Player.HistoryTurn) == 0
       and ((change.to == Player.Judge and x > 0) or change.to == Player.Draw or change.to == Player.Play)
       and exist_or_not(player, change.to)
     elseif event == fk.EventPhaseEnd then
-      print("can_end") --*3
       return target == player and player:hasSkill(self.name)
       and player:getMark("v_jiaoduo_using") > 0
     end
@@ -1841,7 +2088,6 @@ local v_jiaoduo = fk.CreateTriggerSkill{
         table.insert(cards, p)
       end
       local x = #(cards)
-      print(x)
       room:setPlayerMark(player, "v_jiaoduo_using", 1)
       if x > 0 then
         room:setPlayerMark(player, "@v_jiaoduo_card", x)
