@@ -32,6 +32,7 @@ extension.metadata = require "packages.vupslash.metadata"
 -- 在卡牌上做标记（涉及：秋乌炽翎）
 -- 增加轮次时点（涉及：萨比萌视幻）
 -- 新增技能种类：转换技
+-- 玩家是否可以使用特定牌
 -- 胜率！（根据单游戏包/多游戏包，不同模式分类（可以把这些也做进筛选项））
 -- 录像！！！！
 -- AI！！！！！
@@ -927,8 +928,7 @@ local v_huweishan = fk.CreateTriggerSkill{
             type = "#v_huweishan_success",
             from = player.id,
             arg = self.name,
-            --无法显示出真正的牌名
-            --car = card_id,
+            card = { card_id },
           }
         end
       end
@@ -948,7 +948,8 @@ xingmengzhenxue_rongyixiaohu:addSkill(v_huweishan)
 --抹挑
 --技能马克：
 --（后续跟全局合并）检测出牌阶段造成伤害的数量
--- “本回合可以造成的伤害最高为1”测试失败，请后续确认跟标签有关还是其他东西有关
+-- “本回合可以造成的伤害最高为1”后续可以补动画。
+--注释：本技能将导致造成一点伤害后，伤害传导也无效。
 --------------------------------------------------
 
 local v_motiao_damage_checker = fk.CreateTriggerSkill{
@@ -971,7 +972,6 @@ local v_motiao_damage_checker = fk.CreateTriggerSkill{
       local room = player.room
       room:setPlayerMark(player, "#play_damage", 0)
     end
-    
   end,
 }
 local v_motiao = fk.CreateTriggerSkill{
@@ -1062,21 +1062,24 @@ local v_motiao = fk.CreateTriggerSkill{
       if x < data.damage then
         if x > 0 then
           data.damage = 1
-          return false
+          --return false
         else
+          --动画可以放这里放。
           room:sendLog{
             type = "#defense_damage",
             from = player.id,
-            to = target.id,
+            --log.to是数组
+            to = {data.to.id},
             arg = self.name,
             arg2 = data.damage,
           }
-          return true
+          data.damage = 0
         end
       end
     end
   end
 }
+v_motiao:addRelatedSkill(v_motiao_damage_checker)
 
 table.insert(turn_end_clear_mark, "v_motiao_using")
 
@@ -1104,7 +1107,7 @@ local v_lianzou = fk.CreateTriggerSkill{
     return target == player and player:hasSkill(self.name)
     and player.phase == Player.Play
     and player:usedSkillTimes(self.name, Player.HistoryGame) == 0
-    and player:getMark("@v_lianzou_count") >= 1
+    and player:getMark("@v_lianzou_count") >= 50
     --end
   end,
   on_cost = function(self, event, target, player, data)
@@ -1541,12 +1544,12 @@ local v_xiexi = fk.CreateTriggerSkill{
   -- end,
   on_cost = function(self, event, target, player, data)
     if not target.chained then
-      local prompt = "v_xiexi_chain:"..target
+      local prompt = "v_xiexi_chain:"..target.id
       if yes_or_no(player, self.name, prompt) then
         return true
       end
     elseif target.chained then
-      local prompt = "v_xiexi_damage:"..target
+      local prompt = "v_xiexi_damage:"..target.id
       if yes_or_no(player, self.name, prompt) then
         return true
       end
@@ -2248,11 +2251,9 @@ local v_bianshi = fk.CreateActiveSkill{
     if draw_num > 0 then
       room:sendLog{
         type = "#v_bianshi",
-        from = player.id,
+        from = pp.id,
         arg = self.name,
         arg2 = x
-        --无法显示出真正的牌名
-        --car = card_id,
       }
       room:drawCards(pp, draw_num, self.name, top)
       room:askForDiscard(pp, draw_num, draw_num, true, self.name, false)
@@ -2272,17 +2273,54 @@ local v_chengzhang = fk.CreateTriggerSkill{
   --时机：体力回复后
   events = {fk.HpRecover},
   --触发条件：
-  --（摸牌）触发时机的角色为遍历到的角色、遍历到的角色具有本技能、目标体力==1。
+  --（摸牌）造成回复的角色为遍历到的角色、遍历到的角色具有本技能、触发时机的角色体力==1。
   can_trigger = function(self, event, target, player, data)
-    return target == player and player:hasSkill(self.name) 
+    print(player)
+    print(data.recoverBy)
+    local room = player.room
+    local saver = room:getPlayerById(data.recoverBy)
+    return saver == player and player:hasSkill(self.name) 
     and target.hp == 1
   end,
   -- on_cost = function(self, event, target, player, data)
   --   return true
   -- end,
   on_use = function(self, event, target, player, data)
-    local y = 2*player:getMark("v_yishou_active")
-    data.n = data.n + y
+    local room = player.room
+    --记录牌堆及弃牌堆的装备牌。
+    local equips = {}
+    --这里没摸到牌堆/弃牌堆的牌
+    local draw = room.draw_pile
+    local discard = room.discard_pile
+    for _,p in ipairs(draw) do
+      local card = Fk:getCardById(p)
+      --（后续可以补充isavailable判定确保这个装备是可以被玩家装备的，如果出现玩家因为装备区封印穿不上去的情况可以噶了。)
+      if card.type == Card.TypeEquip then
+        table.insert(equips, p)
+      end
+    end
+    for _,p in ipairs(discard) do
+      local card = Fk:getCardById(p)
+      --（后续可以补充isavailable判定确保这个装备是可以被玩家装备的，如果出现玩家因为装备区封印穿不上去的情况可以噶了。)
+      if card.type == Card.TypeEquip then
+        table.insert(equips, p)
+      end
+    end
+    if #(equips) > 0 then
+      print(#(equips))
+      local x = #(equips)
+      local c = math.random(0, x - 1)
+      print(c)
+      --说是这里返回了一个虚空值，搞不懂了（呆滞）
+      local card = equips:at(c)
+      local new_use = {} ---@type CardUseStruct
+      new_use.from = player.id
+      --技能马克：可能会存在类似于知更酱多目标BUG的问题
+      new_use.tos = { { player.id } }
+      new_use.card = Fk:getCardById(card)
+      new_use.skillName = self.name
+      room:useCard(new_use)
+    end
   end,
 }
 
@@ -2291,8 +2329,9 @@ local v_chengzhang = fk.CreateTriggerSkill{
 --角色马克：
 --------------------------------------------------
 
-local xiaomao_lairikeqi = General(extension,"xiaomao_lairikeqi", "individual", 4, 4, General.Female)
+local xiaomao_lairikeqi = General(extension,"xiaomao_lairikeqi", "individual", 1, 4, General.Female)
 xiaomao_lairikeqi:addSkill(v_bianshi)
+xiaomao_lairikeqi:addSkill(v_chengzhang)
 
 --------------------------------------------------
 --模式：斗地主

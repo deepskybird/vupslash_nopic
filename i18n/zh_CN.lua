@@ -38,7 +38,7 @@ Fk:loadTranslationTable{
 	["cancel"] = "取消",
 
 	--通用描述
-	["#defense_damage"] = "由于“%arg”的效果，防止了 %from 对 %to 造成的 %arg2 点伤害",
+	["#defense_damage"] = "由于 %arg”的效果，防止了 %from 对 %to 造成的 %arg2 点伤害",
 
 	--角色
 	--psp
@@ -159,7 +159,7 @@ Fk:loadTranslationTable{
 	--[":v_huweishan"] = "每回合限一次，你使用【杀】时，你可以，摸一张牌并展示之，若之为基本牌则你可以弃置之，令此【杀】不计入出牌阶段的使用次数。",
   	["$v_huweishan1"] = "",
 	["$v_huweishan2"] = "",
-	["#v_huweishan_success"] = "由于“ %arg ”的效果，%from 的【杀】不计入使用次数",
+	["#v_huweishan_success"] = "由于“%arg”的效果，%from 的 %card 不计入使用次数",
 	["v_huweishan_throw_choice"] = "你可以弃置获得的牌，令此杀不计入使用次数",
 
 	--超次元学院
@@ -266,8 +266,8 @@ Fk:loadTranslationTable{
 	[":v_xiexi"] = "一名角色使用红桃牌结算结束后，你可以<font color='#A9A9A9'>发动此技能</font>，若其未横置则横置之，否则对其造成1点火焰伤害。",
 	["$v_xiexi"] = "",
   --["#v_xiexi_invoke"] = "你可以发动“蟹袭”，横置 %src，若其已横置，则对 %src 造成1点火焰伤害",
-	["v_xiexi_chain"] = "你可以发动“蟹袭”，横置 %from",
-	["v_xiexi_damage"] = "你可以发动“蟹袭”，对 %from 造成1点火焰伤害",
+	["v_xiexi_chain"] = "你可以发动“蟹袭”，横置 %src",
+	["v_xiexi_damage"] = "你可以发动“蟹袭”，对 %src 造成1点火焰伤害",
 	["v_guiying"] = "归影",
 	[":v_guiying"] = "你离场时，你可以指定一名其他角色，<font color='#A9A9A9'>发动此技能</font>，其翻面然后获得你区域内的所有牌。",
 	["$v_guiying"] = "",
