@@ -33,6 +33,7 @@ extension.metadata = require "packages.vupslash.metadata"
 -- 增加轮次时点（涉及：萨比萌视幻）
 -- 新增技能种类：转换技
 -- 玩家是否可以使用特定牌
+-- 从指定牌堆中找特定的牌
 -- 胜率！（根据单游戏包/多游戏包，不同模式分类（可以把这些也做进筛选项））
 -- 录像！！！！
 -- AI！！！！！
@@ -2263,7 +2264,8 @@ local v_bianshi = fk.CreateActiveSkill{
 
 --------------------------------------------------
 --成长
---技能马克：技能效果没写
+--技能马克：
+-- 技能效果没写
 --------------------------------------------------
 
 local v_chengzhang = fk.CreateTriggerSkill{
@@ -2292,8 +2294,11 @@ local v_chengzhang = fk.CreateTriggerSkill{
     --这里没摸到牌堆/弃牌堆的牌
     local draw = room.draw_pile
     local discard = room.discard_pile
+    print(draw)
+    print(discard)
     for _,p in ipairs(draw) do
       local card = Fk:getCardById(p)
+      print(card)
       --（后续可以补充isavailable判定确保这个装备是可以被玩家装备的，如果出现玩家因为装备区封印穿不上去的情况可以噶了。)
       if card.type == Card.TypeEquip then
         table.insert(equips, p)
@@ -2301,11 +2306,13 @@ local v_chengzhang = fk.CreateTriggerSkill{
     end
     for _,p in ipairs(discard) do
       local card = Fk:getCardById(p)
+      print(card)
       --（后续可以补充isavailable判定确保这个装备是可以被玩家装备的，如果出现玩家因为装备区封印穿不上去的情况可以噶了。)
       if card.type == Card.TypeEquip then
         table.insert(equips, p)
       end
     end
+    print(equips)
     if #(equips) > 0 then
       print(#(equips))
       local x = #(equips)
