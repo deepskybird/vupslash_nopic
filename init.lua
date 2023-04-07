@@ -2265,80 +2265,75 @@ local v_bianshi = fk.CreateActiveSkill{
 --------------------------------------------------
 --成长
 --技能马克：
--- 技能效果没写
+-- 技能效果可以实现，但由于底层BUG导致问题堆积然后游戏自爆。
+-- 以防万一，这技能先噶了（抹泪）。
 --------------------------------------------------
 
-local v_chengzhang = fk.CreateTriggerSkill{
-  name = "v_chengzhang",
-  --赋予支援型技能定义
-  anim_type = "support",
-  --时机：体力回复后
-  events = {fk.HpRecover},
-  --触发条件：
-  --（摸牌）造成回复的角色为遍历到的角色、遍历到的角色具有本技能、触发时机的角色体力==1。
-  can_trigger = function(self, event, target, player, data)
-    print(player)
-    print(data.recoverBy)
-    local room = player.room
-    local saver = room:getPlayerById(data.recoverBy)
-    return saver == player and player:hasSkill(self.name) 
-    and target.hp == 1
-  end,
-  -- on_cost = function(self, event, target, player, data)
-  --   return true
-  -- end,
-  on_use = function(self, event, target, player, data)
-    local room = player.room
-    --记录牌堆及弃牌堆的装备牌。
-    local equips = {}
-    --这里没摸到牌堆/弃牌堆的牌
-    local draw = room.draw_pile
-    local discard = room.discard_pile
-    print(draw)
-    print(discard)
-    for _,p in ipairs(draw) do
-      local card = Fk:getCardById(p)
-      print(card)
-      --（后续可以补充isavailable判定确保这个装备是可以被玩家装备的，如果出现玩家因为装备区封印穿不上去的情况可以噶了。)
-      if card.type == Card.TypeEquip then
-        table.insert(equips, p)
-      end
-    end
-    for _,p in ipairs(discard) do
-      local card = Fk:getCardById(p)
-      print(card)
-      --（后续可以补充isavailable判定确保这个装备是可以被玩家装备的，如果出现玩家因为装备区封印穿不上去的情况可以噶了。)
-      if card.type == Card.TypeEquip then
-        table.insert(equips, p)
-      end
-    end
-    print(equips)
-    if #(equips) > 0 then
-      print(#(equips))
-      local x = #(equips)
-      local c = math.random(0, x - 1)
-      print(c)
-      --说是这里返回了一个虚空值，搞不懂了（呆滞）
-      local card = equips:at(c)
-      local new_use = {} ---@type CardUseStruct
-      new_use.from = player.id
-      --技能马克：可能会存在类似于知更酱多目标BUG的问题
-      new_use.tos = { { player.id } }
-      new_use.card = Fk:getCardById(card)
-      new_use.skillName = self.name
-      room:useCard(new_use)
-    end
-  end,
-}
+-- local v_chengzhang = fk.CreateTriggerSkill{
+--   name = "v_chengzhang",
+--   --赋予支援型技能定义
+--   anim_type = "support",
+--   --时机：体力回复后
+--   events = {fk.HpRecover},
+--   --触发条件：
+--   --（摸牌）造成回复的角色为遍历到的角色、遍历到的角色具有本技能、触发时机的角色体力==1。
+--   can_trigger = function(self, event, target, player, data)
+--     print(player)
+--     print(data.recoverBy)
+--     local room = player.room
+--     local saver = room:getPlayerById(data.recoverBy)
+--     return saver == player and player:hasSkill(self.name) 
+--     and target.hp == 1
+--   end,
+--   -- on_cost = function(self, event, target, player, data)
+--   --   return true
+--   -- end,
+--   on_use = function(self, event, target, player, data)
+--     local room = player.room
+--     --记录牌堆及弃牌堆的装备牌。
+--     local equips = {}
+--     --这里没摸到牌堆/弃牌堆的牌
+--     local draw = room.draw_pile
+--     local discard = room.discard_pile
+--     for _,p in ipairs(draw) do
+--       local card = Fk:getCardById(p)
+--       --（后续可以补充isavailable判定确保这个装备是可以被玩家装备的，如果出现玩家因为装备区封印穿不上去的情况可以噶了。)
+--       if card.type == Card.TypeEquip then
+--         table.insert(equips, p)
+--       end
+--     end
+--     for _,p in ipairs(discard) do
+--       local card = Fk:getCardById(p)
+--       --（后续可以补充isavailable判定确保这个装备是可以被玩家装备的，如果出现玩家因为装备区封印穿不上去的情况可以噶了。)
+--       if card.type == Card.TypeEquip then
+--         table.insert(equips, p)
+--       end
+--     end
+--     if #(equips) > 0 then
+--       local x = #(equips)
+--       local c = math.random(0, x - 1)
+--       local card = equips[c]
+--       --这种函数可以从表中随机选n个元素并返回一张表，如果n是nil，那么返回的就不是表而是单个元素
+--       --local card = table.random(equips, nil)
+--       local new_use = {} ---@type CardUseStruct
+--       new_use.from = player.id
+--       --技能马克：可能会存在类似于知更酱多目标BUG的问题
+--       new_use.tos = { { player.id } }
+--       new_use.card = Fk:getCardById(card)
+--       new_use.skillName = self.name
+--       room:useCard(new_use)
+--     end
+--   end,
+-- }
 
 --------------------------------------------------
 --小毛
---角色马克：
+--角色马克：成长等源码movecards（room和client部分）差距修复即可。
 --------------------------------------------------
 
-local xiaomao_lairikeqi = General(extension,"xiaomao_lairikeqi", "individual", 1, 4, General.Female)
+local xiaomao_lairikeqi = General(extension,"xiaomao_lairikeqi", "individual", 4, 4, General.Female)
 xiaomao_lairikeqi:addSkill(v_bianshi)
-xiaomao_lairikeqi:addSkill(v_chengzhang)
+-- xiaomao_lairikeqi:addSkill(v_chengzhang)
 
 --------------------------------------------------
 --模式：斗地主
