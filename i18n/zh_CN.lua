@@ -247,7 +247,7 @@ Fk:loadTranslationTable{
 	["#v_shihuan_buff"] = "视幻",
 	[":v_shihuan"] = "每轮限一次，一名角色的准备阶段，你可以<font color='#A9A9A9'>发动此技能</font>，令其本回合手牌上限等于X。（X为其手牌数且至少为1）",
 	["$v_shihuan"] = "",
-	--["v_shihuan:choice"] = "你可以发动“视幻”，令 %src 本回合的手牌上限变为 %dest",
+	["v_shihuan_choice"] = "你可以发动“视幻”，令 %src 本回合的手牌上限变为 %arg",
 	["#v_shihuan_log"] = "由于“%arg”的效果，%to 本回合手牌上限变为 %arg2",
 	["v_kecan"] = "可餐",
 	[":v_kecan"] = "锁定技，你受到伤害后，伤害来源进行一次判定，若结果为锦囊牌，其回复1点体力，你失去1点体力上限。",
@@ -316,8 +316,8 @@ Fk:loadTranslationTable{
 	["#v_yishou_mark"] = "忆狩",
 	["@v_yishou_count"] = "忆狩",
 	[":v_yishou"] = "<font color='#9400D3'>结束阶段/当你受到1点伤害后</font>，你可以 <font color='#9400D3'>失去1点体力/弃置一张牌</font> <font color='#A9A9A9'>发动此技能</font>，你下回合的通常摸牌数＋2、使用【杀】的次数上限＋1。",
-	--["@v_yishou"] = "你可以弃置一张牌发动“忆狩”，下回合你多摸2张牌、可以多使用1张杀",  --可以用于提示栏
 	["v_yishou_end"] = "你可以失去1点体力发动“忆狩”，下回合你多摸2张牌、可以多使用1张杀",
+	["v_yishou_damage"] = "你可以弃置一张牌发动“忆狩”，下回合你多摸2张牌、可以多使用1张杀",
 	["#v_yishou_log"] = "由于“<b><font color='yellow'>忆狩</font></b>”的效果，%from 本回合通常摸牌数+%arg，使用杀的次数上限+%arg2",
 	["v_jixue"] = "祭血",
 	[":v_jixue"] = "限定技，出牌阶段，你可以弃置你的所有红色牌，每以此法弃置一张牌，你回复1点体力或摸一张牌。",

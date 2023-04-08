@@ -45,8 +45,6 @@ extension.metadata = require "packages.vupslash.metadata"
 --通用马克
 --4/3血量的前端怎么处理需要后续看看QML能不能直接通过导入最大血量及现有血量逃课（N说是涉及底层汇编级别的问题，我想应该以后会有别的办法）
 
---skillinvoke强行发动一次的问题后续可以通过调整on_cost处理。【初步解决，后续检查并实装on_cost，等0.0.7skillinvoke更新后改回来。】
--- 涉及范围：视幻（等回头搞好时机再说） 蟹袭（未测试） 忆狩（掉血部分优化暂无法完成） 娇惰
 --缺少技能无效时的应对（慵懒，芳仙，视幻等，后续更新）【疑似在skill里有可用函数】
 -- 在上面的情况下，以下技能存在跳过阶段无法作为on_cost一部分的方式，后续处理（芳仙、娇惰）
 --通用计算回合内伤害/弃牌量的东西暂时耦合在其他技能里（扬歌，抹挑）
@@ -1414,23 +1412,50 @@ local v_shihuan = fk.CreateTriggerSkill{
     local room = player.room
     local alives = room:getAlivePlayers()
     local targets = {}
+    local targets_myself = {}
+    local player_to = nil
     for _,p in ipairs(alives) do
       if p:hasSkill(self.name) then
         table.insert(targets, p.id)
       end
     end
+    for _,p in ipairs(alives) do
+      if p:hasSkill(self.name) then
+        table.insert(targets_myself, p.id)
+      end
+    end
+    --无法确认此情况下本技能对多个持有本技能的角色会造成什么。
+    for _,myself in targets do
+      player_to = room:getPlayerById(myself[1])
+    end
     return #targets > 0 and player.phase == Player.Start
+    and player_to:usedSkillTime(self.name, Player.HistoryRound) < 1
   end,
   -- on_trigger = function(self, event, target, player, data)
   --   --if self:isEffectable(player) then
   --   self:doCost(event, target, player, data)
   --   --end
   -- end,
-  -- on_cost = function(self, event, target, player, data)
-  --   --if self:isEffectable(player) then
-  --   return true
-  --   --end
-  -- end,
+  on_cost = function(self, event, target, player, data)
+    local room = player.room
+    local alives = room:getAlivePlayers()
+    local targets = {}
+    for _,p in ipairs(alives) do
+      if p:hasSkill(self.name) then
+        table.insert(targets, p.id)
+      end
+    end
+    for _,myself in targets do
+      local player_to = room:getPlayerById(myself[1])
+      if player_to:usedSkillTime(self.name, Player.HistoryRound) < 1 then
+        --先用askforskillinvoke试试，如果存在多次发动嵌套则可能使用askforchooseplayer（此状态下无法放提示）
+        local prompt = "v_shihuan_choice:"..player.id.."::"..player:getHandcardNum()
+        if room:askForSkillInvoke(player_to,self.name,data,prompt) then
+          return true
+        end
+      end
+    end
+  end,
   on_use = function(self, event, target, player, data)
     --遍历全场所有角色，对持有此技能的角色检查是否本轮次使用过技能，若无，则询问其是否发动技能。
     local room = player.room
@@ -1445,21 +1470,20 @@ local v_shihuan = fk.CreateTriggerSkill{
       local player_to = room:getPlayerById(myself[1])
       if player_to:usedSkillTime(self.name, Player.HistoryRound) < 1 then
         --先用askforskillinvoke试试，如果存在多次发动嵌套则可能使用askforchooseplayer（此状态下无法放提示）
-        if room:askForSkillInvoke(player_to,self.name,data) then
-          if player_to ~= player then
-            --doindicate的两个参数均为integer类型，一般为角色id
-            room:doIndicate(player_to.id,myself)
-          end
-          -- TODO:后续这里做log在提示信息中说明角色手牌上限调整。
-          -- room:sendLog{
-          --   type = "#v_shihuan_log",
-          --   from = player.id,
-          --   arg = self.name,
-          --   arg2 = math.max(1, player:getHandcardNum(),
-          -- }
-          -- body
-          room:setPlayerMark(player,"@v_shihuan!",math.max(1, player:getHandcardNum()))
+        local prompt = "v_shihuan_choice:"..player.id.."::"..player:getHandcardNum()
+        if player_to ~= player then
+          --doindicate的两个参数均为integer类型，一般为角色id
+          room:doIndicate(player_to.id,myself)
         end
+        -- TODO:后续这里做log在提示信息中说明角色手牌上限调整。
+        -- room:sendLog{
+        --   type = "#v_shihuan_log",
+        --   from = player.id,
+        --   arg = self.name,
+        --   arg2 = math.max(1, player:getHandcardNum(),
+        -- }
+        -- body
+        room:setPlayerMark(player,"@v_shihuan!",math.max(1, player:getHandcardNum()))
       end
     end
   end,
@@ -1544,14 +1568,17 @@ local v_xiexi = fk.CreateTriggerSkill{
   --   --end
   -- end,
   on_cost = function(self, event, target, player, data)
+    local room = player.room
     if not target.chained then
       local prompt = "v_xiexi_chain:"..target.id
-      if yes_or_no(player, self.name, prompt) then
+      --if yes_or_no(player, self.name, prompt) then
+      if room:askForSkillInvoke(player, self.name, data, prompt) then
         return true
       end
     elseif target.chained then
       local prompt = "v_xiexi_damage:"..target.id
-      if yes_or_no(player, self.name, prompt) then
+      --if yes_or_no(player, self.name, prompt) then
+      if room:askForSkillInvoke(player, self.name, data, prompt) then
         return true
       end
     end
@@ -1864,9 +1891,10 @@ local v_yishou_mark = fk.CreateTriggerSkill{
     --如果扳机为受到伤害后，根据体力值触发技能；否则正常触发。
     if event == fk.Damaged then
       for i = 1, data.damage do
+        local prompt = "v_yishou_damage"
         local room = player.room
         if (not player:isNude()) then
-          local ret = room:askForDiscard(player, 1, 1, true, self.name, true)
+          local ret = room:askForDiscard(player, 1, 1, true, self.name, true, ".", prompt)
           --需要的话在这里增加技能检测失效
           if #ret > 0 then
           --if room:askForDiscard(player, 1, 1, true, self.name, true) then
@@ -1877,7 +1905,8 @@ local v_yishou_mark = fk.CreateTriggerSkill{
     elseif event == fk.EventPhaseStart then
       --需要的话在这里增加技能检测失效;非锁定技想强制发动这里用个true就好啦
       local prompt = "v_yishou_end"
-      if yes_or_no(player, self.name, prompt) then
+      --if yes_or_no(player, self.name, prompt) then
+      if room:askForSkillInvoke(player, self.name, data, prompt) then
         --尝试了一下，这里不能跳阶段，失败的话只能耦合到on_use了。
         room:loseHp(player, 1, self.name)
         return true
@@ -2072,6 +2101,7 @@ local v_jiaoduo = fk.CreateTriggerSkill{
   on_cost = function(self, event, target, player, data)
     --获取本阶段手牌数，确认是否跳过本阶段。
     if event == fk.EventPhaseChanging then
+      local room = player.room
       local change = data
       --print("EventPhaseChanging")
       local prompt = "#v_jiaoduo_choice:::"..phase_string(change.to)..":"..0
@@ -2088,7 +2118,8 @@ local v_jiaoduo = fk.CreateTriggerSkill{
         end
         prompt = "#v_jiaoduo_choice:::"..phase_string(change.to)..":"..x
       end
-      if yes_or_no(player, self.name, prompt) then
+      if room:askForSkillInvoke(player, self.name, data, prompt) then
+      --if yes_or_no(player, self.name, prompt) then
         --尝试了一下，这里不能跳阶段，失败的话只能耦合到on_use了。
         --player:skip(change.to)
         return true
